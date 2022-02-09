@@ -1,3 +1,5 @@
 *.py
 */
+!anime_downloader/
+!anime_downloader/**
 **__pycache__/
