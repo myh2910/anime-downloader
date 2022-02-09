@@ -8,9 +8,10 @@ https://pigplayer.xyz.
 from timeit import default_timer
 
 from .config import CONFIG
+from .utils import sanitize_filename
 from . import get
 
-__version__ = "1.2.0"
+__version__ = "1.2.1"
 __author__ = "Yohan Min"
 
 def download(
@@ -39,11 +40,18 @@ def download(
 	for key, value in kwargs.items():
 		CONFIG[key] = value
 
+	if title:
+		CONFIG['filename'] = title = sanitize_filename(title)
+		CONFIG['dirname'] = f"{title}-{code}"
+	else:
+		CONFIG['filename'] = code
+		CONFIG['dirname'] = code
+
 	elapsed_time = -default_timer()
 	if get.write_fragments(code, num_domain, start):
-		get.merge_fragments(code, title, start)
+		get.merge_fragments(start)
 	if subtitle:
-		get.write_subtitle(code, title, subtitle)
+		get.write_subtitle(subtitle)
 	elapsed_time += default_timer()
 
-	print(f"Elapsed time: {elapsed_time:0.2f}")
+	print(f":: Elapsed time: {elapsed_time:0.2f}")
