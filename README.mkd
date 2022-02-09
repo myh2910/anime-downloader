@@ -1,3 +1,47 @@
 # anime-downloader
 
-Download Japanese animations with Korean subtitles from https://ohli24.net/.
+Download Japanese animations with Korean subtitles from <https://ohli24.net/>.
+
+## Requirements
+
+- `pip install requests`
+
+## Usage
+
+```python
+from anime_downloader import download
+
+for chapter, code in [
+	(11, "7ab3b316547e508aafaed21485532698"),
+	(12, "93e6b20417eecfeb7beb1216c6e27459"),
+	(13, "65b148224b0f0d805b48ef7e75c619b6"),
+	(14, "7a623dc252a57c198ea7253025c00096"),
+	(15, "5ba38ba722d7b1674a2c575cba2f850d"),
+	(16, "4854a927e301c0d8c431b352a789b799"),
+	(17, "93fc1f9e853b7401e82ca2a0c165e3ea"),
+	(18, "9e1feafa8087ee957689548f302b4e57"),
+	(19, "743f12b364d1e6c29dc5ef30c984d4ef"),
+	(20, "42e70c5a443fc3155c8d1be64b34d013"),
+	(21, "18a72fc36b3c2f1a429492b4408d9fdb"),
+	(22, "48a34a589f9a18365bc5bdd708fc2f94"),
+	(23, "3023559f7506a028402d5ef6d612fab1"),
+	(24, "0e5d716a55d4e82226160d904ba965ec"),
+	(25, "2448f74687a26146c5cf0a9f7feef04e")
+]:
+	download(
+		code,
+		f"Re: 제로부터 시작하는 이세계 생활 {chapter}화",
+		f"subtitles/ani/2016/제로시작{chapter:02d}.srt",
+		(chapter - 1) % 3,
+		auto=True
+	)
+```
+
+## To-do
+
+- [ ] Find a way to extract some meaningful data of video fragments before
+	downloading them.
+- [ ] Decrypt pigplayer video codes.
+- [ ] Work with the `selenium` package to extract data of anime chapters before
+	downloading them.
+- [ ] Implement a search function for animes.
