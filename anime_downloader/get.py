@@ -1,180 +1,194 @@
 """
-Extract and write video fragments and subtitles.
+Extract video and subtitle data.
 
 """
-import os
+import re
+
 import requests
+import undetected_chromedriver as uc
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 from .config import CONFIG
-from .utils import DOMAINS
 
-def write_subtitle(subtitle):
+def get_id_from_source(source):
 	"""
-	Write subtitle file.
+	Get video ID from source.
 
 	Parameters
-	==========
-	subtitle : str
-		Subtitle path.
-	"""
-	ext = os.path.splitext(subtitle)[1]
-	filename = os.path.join(CONFIG['dirname'], f"{CONFIG['filename']}{ext}")
-
-	print(":: Extracting subtitle file...")
-	if os.path.exists(filename):
-		print(f" File {filename} already exists.")
-		return
-
-	subtitle_url = f"https://pigplayer.com/{subtitle}"
-	print(f" Connecting to {subtitle_url}...")
-	res = requests.get(subtitle_url)
-
-	if res.status_code == 200:
-		with open(filename, "wb") as file:
-			file.write(res.content)
-	elif res.status_code == 404:
-		print(" [Error] 404 Not Found.")
-	else:
-		print(f" [Error] Unknown status code: {res.status_code}")
-
-def write_fragments(code, num_domain, start):
-	"""
-	Download video fragments.
-
-	Parameters
-	==========
-	code : str
-		Pigplayer video code.
-	num_domain : int
-	start : int
-		Initial fragment index.
+	----------
+	source : str
+		Video data source.
 
 	Returns
-	=======
-	success : bool
-		Indicates whether the download process was succesful or not.
+	-------
+	str
+		Video data ID.
 	"""
-	outfile = os.path.join(
-		CONFIG['dirname'],
-		f"{CONFIG['filename']}.{CONFIG['exts'][1]}"
-	)
+	return re.search("data=(.*?)$", source).group(1)
 
-	print(":: Extracting video fragments...")
-	if os.path.exists(outfile):
-		print(f" File {outfile} already exists.")
-		return False
-
-	if CONFIG['quality'] == "best":
-		CONFIG['quality'] = "1080p"
-		url = f"/cdn/down/{code}/{CONFIG['quality']}/{CONFIG['quality']}"
-		fragment_url = DOMAINS[num_domain][start % 10] \
-			+ f"{url}{start}.{CONFIG['exts'][0]}"
-		res = requests.get(fragment_url)
-		if res.status_code != 200:
-			CONFIG['quality'] = "720p"
-
-	dirname = os.path.join(CONFIG['dirname'], CONFIG['quality'])
-	if not os.path.exists(dirname):
-		os.makedirs(dirname)
-
-	url = f"/cdn/down/{code}/{CONFIG['quality']}/{CONFIG['quality']}"
-	num_fragment = start
-	success = True
-
-	while True:
-		fragment = os.path.join(dirname, f"{num_fragment}.{CONFIG['exts'][0]}")
-		if os.path.exists(fragment):
-			print(f" File {fragment} already exists.")
-			num_fragment += 1
-			continue
-
-		fragment_url = DOMAINS[num_domain][num_fragment % 10] \
-			+ f"{url}{num_fragment}.{CONFIG['exts'][0]}"
-		print(f" Connecting to {fragment_url}...")
-		res = requests.get(fragment_url)
-
-		if res.status_code == 200:
-			with open(fragment, "wb") as fragment_file:
-				fragment_file.write(res.content)
-			num_fragment += 1
-			continue
-
-		if res.status_code != 404:
-			print(f" [Error] Unknown status code: {res.status_code}")
-			return False
-
-		print(" [Error] 404 Not Found.")
-		if num_fragment == start:
-			return False
-		break
-
-	return success
-
-def remove_fragments(fragments, dirname):
+def get_anime_data(*args):
 	"""
-	Remove fragment files.
+	Get anime data from https://ohli24.net/.
+
+	We use `undetected-chromedriver` package to bypass cloudflare protections.
+	For technical reasons, headless ChromeDriver is not possible.
 
 	Parameters
-	==========
-	fragments : list of str
-		Fragment file paths.
-	dirname : str
-		Folder name.
-	"""
-	if CONFIG['auto']:
-		remove = "y"
-	else:
-		remove = input(":: Remove all the fragment files? [y/N] ")
-		if remove.strip() not in ["y", "Y", "n", "N"]:
-			remove = "n"
+	----------
+	args : tuple of str
+		Anime chapter names that come after https://ohli24.net/e/.
 
-	if remove in "yY":
-		print(":: Removing fragment files...")
-		for fragment in fragments:
-			os.remove(fragment)
-		os.rmdir(dirname)
-
-def merge_fragments(start):
+	Returns
+	-------
+	list of tuple or tuple of str
+		Data of animes.
 	"""
-	Merge video fragments in a single video file.
+	data = []
+
+	options = uc.ChromeOptions()
+	options.add_argument("--start-maximized")
+	# options.add_argument("--headless")
+
+	driver = uc.Chrome(options=options)
+	for name in args:
+		driver.get(f"https://ohli24.net/e/{name}")
+
+		source = WebDriverWait(driver, 20).until(EC.presence_of_element_located(
+			(By.XPATH, "//div[@id='movie_player']//iframe")
+		)).get_attribute("src")
+		title = driver.find_element(
+			By.XPATH, "//div[@class='view-title']//h1"
+		).text
+		data.append((source, title))
+
+	driver.quit()
+
+	if len(args) == 1:
+		return data[0]
+	return data
+
+def get_subtitle_url(source):
+	"""
+	Get subtitle url.
 
 	Parameters
-	==========
-	start : int
-		Initial fragment index.
+	----------
+	source : str
+		Video data source.
+
+	Returns
+	-------
+	str
+		Subtitle file link.
 	"""
-	outfile = os.path.join(
-		CONFIG['dirname'],
-		f"{CONFIG['filename']}.{CONFIG['exts'][1]}"
-	)
+	headers = CONFIG['headers']
+	headers['Referer'] = source
 
-	if os.path.exists(outfile):
-		if CONFIG['auto']:
-			merge = "y"
-			print(f":: Replacing existing file {outfile}...")
-		else:
-			merge = input(f":: Replace the existing file {outfile}? [y/N] ")
-			if merge.strip() not in ["y", "Y", "n", "N"]:
-				merge = "n"
-	else:
-		merge = "y"
-		print(":: Merging video fragments in a single file...")
+	res = requests.get(source, headers=headers)
+	res.raise_for_status()
 
-	if merge in "yY":
-		with open(outfile, "wb") as file:
-			dirname = os.path.join(CONFIG['dirname'], CONFIG['quality'])
-			fragment_num = start
-			fragments = []
+	decoded_content = res.content.decode("utf8")
+	return re.search("var videoCaption = '(.*?)';", decoded_content).group(1)
 
-			while True:
-				fragment = os.path.join(dirname, f"{fragment_num}.{CONFIG['exts'][0]}")
-				if not os.path.exists(fragment):
-					break
+def get_subtitle_file(url, path):
+	"""
+	Download subtitle file.
 
-				print(f" Merging file {fragment}...")
-				fragments.append(fragment)
-				with open(fragment, "rb") as fragment_file:
-					file.write(fragment_file.read())
-				fragment_num += 1
+	Parameters
+	----------
+	url : str
+		Subtitle file link.
+	path : str
+		Subtitle file path.
+	"""
+	print(f" Connecting to {url}...")
+	res = requests.get(url)
+	res.raise_for_status()
 
-	remove_fragments(fragments, dirname)
+	with open(path, "wb") as file:
+		file.write(res.content)
+
+def get_video_source(source):
+	"""
+	Get code of the video source.
+
+	Parameters
+	----------
+	source : str
+		Video data source.
+
+	Returns
+	-------
+	str
+		Video source.
+	"""
+	headers = CONFIG['headers']
+	headers['Referer'] = source
+
+	res = requests.post(f"{source}&do=getVideo", headers=headers)
+	res.raise_for_status()
+
+	return res.json()['videoSource']
+
+def get_fragments_url(source, video_source):
+	"""
+	Get fragment links.
+
+	Parameters
+	----------
+	source : str
+		Video data source.
+	video_source : str
+		Video source.
+
+	Returns
+	-------
+	tuple of str and list
+		Fragment links.
+	"""
+	headers = CONFIG['headers']
+	headers['Referer'] = source
+
+	res = requests.get(video_source, headers=headers)
+	res.raise_for_status()
+
+	resolutions, heights = {}, []
+	for _, height, url in re.findall(
+		"RESOLUTION=(.*?)x(.*?)\n(.*?)\n", res.content.decode("utf8") + "\n"
+	):
+		resolutions[f'{height}p'] = url
+		heights.append(int(height))
+
+	match CONFIG['quality']:
+		case "best":
+			quality = f"{max(heights)}p"
+		case "fast":
+			quality = f"{min(heights)}p"
+		case _:
+			quality = CONFIG['quality']
+
+	res = requests.get(resolutions[quality], headers=headers)
+	res.raise_for_status()
+
+	return quality, re.findall("&url=(.*?)\n", res.content.decode("utf8"))
+
+def get_fragment_file(url, path):
+	"""
+	Download fragment file.
+
+	Parameters
+	----------
+	url : str
+		Fragment file link.
+	path : str
+		Fragment file path.
+	"""
+	print(f" Connecting to {url}...")
+
+	res = requests.get(url)
+	res.raise_for_status()
+
+	with open(path, "wb") as file:
+		file.write(res.content)
