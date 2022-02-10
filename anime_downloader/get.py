@@ -6,68 +6,13 @@ import re
 
 import requests
 import undetected_chromedriver as uc
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 from .config import CONFIG
 
-def get_id_from_source(source):
-	"""
-	Get video ID from source.
-
-	Parameters
-	----------
-	source : str
-		Video data source.
-
-	Returns
-	-------
-	str
-		Video data ID.
-	"""
-	return re.search("data=(.*?)$", source).group(1)
-
-def get_anime_data(*args):
-	"""
-	Get anime data from https://ohli24.net/.
-
-	We use `undetected-chromedriver` package to bypass cloudflare protections.
-	For technical reasons, headless ChromeDriver is not possible.
-
-	Parameters
-	----------
-	args : tuple of str
-		Anime chapter names that come after https://ohli24.net/e/.
-
-	Returns
-	-------
-	list of tuple or tuple of str
-		Data of animes.
-	"""
-	data = []
-
-	options = uc.ChromeOptions()
-	options.add_argument("--start-maximized")
-	# options.add_argument("--headless")
-
-	driver = uc.Chrome(options=options)
-	for name in args:
-		driver.get(f"https://ohli24.net/e/{name}")
-
-		source = WebDriverWait(driver, 20).until(EC.presence_of_element_located(
-			(By.XPATH, "//div[@id='movie_player']//iframe")
-		)).get_attribute("src")
-		title = driver.find_element(
-			By.XPATH, "//div[@class='view-title']//h1"
-		).text
-		data.append((source, title))
-
-	driver.quit()
-
-	if len(args) == 1:
-		return data[0]
-	return data
 
 def get_subtitle_url(source):
 	"""
@@ -154,10 +99,10 @@ def get_fragments_url(source, video_source):
 	res = requests.get(video_source, headers=headers)
 	res.raise_for_status()
 
+	content = res.content.decode("utf8") + "\n"
 	resolutions, heights = {}, []
-	for _, height, url in re.findall(
-		"RESOLUTION=(.*?)x(.*?)\n(.*?)\n", res.content.decode("utf8") + "\n"
-	):
+
+	for _, height, url in re.findall("RESOLUTION=(.*?)x(.*?)\n(.*?)\n", content):
 		resolutions[f'{height}p'] = url
 		heights.append(int(height))
 
@@ -187,8 +132,155 @@ def get_fragment_file(url, path):
 	"""
 	print(f" Connecting to {url}...")
 
-	res = requests.get(url)
-	res.raise_for_status()
+	try:
+		res = requests.get(url)
+		res.raise_for_status()
+	except requests.exceptions.ConnectionError:
+		res = requests.get(url)
+		res.raise_for_status()
 
 	with open(path, "wb") as file:
 		file.write(res.content)
+
+def get_id_from_source(source):
+	"""
+	Get video ID from source.
+
+	Parameters
+	----------
+	source : str
+		Video data source.
+
+	Returns
+	-------
+	str
+		Video data ID.
+	"""
+	return re.search("data=(.*?)$", source).group(1)
+
+def get_chrome_driver():
+	"""
+	Get ChromeDriver.
+
+	Returns
+	-------
+	Chrome
+		ChromeDriver.
+	"""
+	options = uc.ChromeOptions()
+	options.add_argument("--start-maximized")
+	# options.add_argument("--headless")
+
+	driver = uc.Chrome(options=options)
+
+	if CONFIG['minimize']:
+		driver.minimize_window()
+
+	return driver
+
+def get_anime_data(*args, driver=None):
+	"""
+	Get anime data from https://ohli24.net/.
+
+	We use `undetected-chromedriver` package to bypass cloudflare protections.
+	For technical reasons, headless ChromeDriver doesn't work well.
+
+	Parameters
+	----------
+	args : tuple of str
+		Anime chapter links.
+	driver : undetected_chromedriver.Chrome or None, optional
+		ChromeDriver object.
+
+	Returns
+	-------
+	list of tuple
+		Data of animes.
+	"""
+	if not driver:
+		driver = get_chrome_driver()
+
+	data = []
+	print(":: Extracting pigplayer source...")
+	for url in args:
+		driver.get(url)
+
+		xpath = "//div[@id='movie_player']//iframe"
+		source = WebDriverWait(driver, CONFIG['wait']).until(
+			EC.presence_of_element_located((By.XPATH, xpath))
+		).get_attribute("src")
+		print(f" {source}")
+
+		title = driver.find_element(By.XPATH, "//div[@class='view-title']//h1")
+		data.append((source, title.text))
+
+	driver.quit()
+	return data
+
+def get_chapters_data(param, prop):
+	"""
+	Get anime chapters data by anime name, board id or search function.
+
+	Parameters
+	----------
+	param : str
+		Parameter value.
+	prop : str
+		Parameter type.
+
+	Returns
+	-------
+	list of tuple or None
+		Anime chapters data available.
+	"""
+	driver = get_chrome_driver()
+
+	match prop:
+		case "name":
+			driver.get(f"https://ohli24.net/c/{param}")
+		case "id":
+			driver.get(
+				f"https://ohli24.net/bbs/board.php?bo_table=fin&wr_id={param}"
+			)
+		case "search":
+			print(":: Extracting list of animes...")
+			driver.get(
+				f"https://ohli24.net/bbs/search.php?srows={CONFIG['show_rows']}\
+&sfl=wr_subject&stx={param}"
+			)
+			content = WebDriverWait(driver, CONFIG['wait']).until(
+				EC.presence_of_element_located((By.CLASS_NAME, "at-content"))
+			)
+
+			try:
+				search_none = content.find_element(By.CLASS_NAME, "search-none")
+				print(f" [Error] {search_none.text}")
+				driver.quit()
+				return None
+			except NoSuchElementException:
+				xpath = "//div[@class='list-desc']//a"
+				list_desc = content.find_elements(By.XPATH, xpath)
+				width = len(str(len(list_desc) - 1))
+
+				for idx, board in enumerate(list_desc):
+					title = board.find_element(By.CLASS_NAME, "post-title").text
+					print(" [" + str(idx).rjust(width) + "]", title)
+
+				idx = input(":: Select anime index [default: 0] ").strip()
+				if idx:
+					idx = int(idx)
+				else:
+					idx = 0
+
+				list_desc[idx].click()
+
+	print(":: Extracting list of chapters available...")
+	list_body = WebDriverWait(driver, CONFIG['wait']).until(
+		EC.presence_of_element_located((By.CLASS_NAME, "list-body"))
+	)
+	item_subject = list_body.find_elements(By.CLASS_NAME, "item-subject")[::-1]
+	for idx, chapter in enumerate(item_subject):
+		print(f" {chapter.text}")
+
+	chapters = (chapter.get_attribute("href") for chapter in item_subject)
+	return get_anime_data(*chapters, driver=driver)

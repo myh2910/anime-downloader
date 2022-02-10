@@ -4,8 +4,8 @@ Write video and subtitle.
 """
 import os
 
-from .config import CONFIG
 from . import get
+from .config import CONFIG
 
 tmp = {}
 
@@ -25,7 +25,7 @@ def sanitize_filename(filename):
 	"""
 	return "".join("_" if char in "\\/:*?\"<>|" else char for char in filename)
 
-def __init__(param, prop, title):
+def __init__(param, prop, title=None):
 	"""
 	Initialize module.
 
@@ -35,7 +35,7 @@ def __init__(param, prop, title):
 		Parameter value.
 	prop : str
 		Parameter type.
-	title : str or None
+	title : str or None, optional
 		Video title.
 
 	Returns
@@ -45,7 +45,7 @@ def __init__(param, prop, title):
 	"""
 	match prop:
 		case "name":
-			source, title = get.get_anime_data(param)
+			source, title = get.get_anime_data(f"https://ohli24.net/e/{param}")[0]
 		case "id":
 			source = f"https://pigplayer.com/player/index.php?data={param}"
 		case "source":
@@ -56,9 +56,9 @@ def __init__(param, prop, title):
 		return False
 
 	title = sanitize_filename(title)
-	tmp['dir'] = os.path.join(
-		CONFIG['home'], f"{title}-{get.get_id_from_source(source)}"
-	)
+	video_id = get.get_id_from_source(source)
+
+	tmp['dir'] = os.path.join(CONFIG['home'], f"{title}-{video_id}")
 	tmp['out'] = os.path.join(tmp['dir'], f"{title}{CONFIG['ext']}")
 
 	if not os.path.exists(tmp['out']):
@@ -88,7 +88,7 @@ def write_subtitle(source, title):
 	else:
 		get.get_subtitle_file(url, path)
 
-def write_fragments(source, start):
+def write_fragments(source, start=0):
 	"""
 	Download video fragments.
 
@@ -96,7 +96,7 @@ def write_fragments(source, start):
 	----------
 	source : str
 		Video data link.
-	start : int
+	start : int, optional
 		Initial fragment index.
 
 	Returns
@@ -104,14 +104,13 @@ def write_fragments(source, start):
 	tuple of bool and None
 		Indicates whether the process was succesful or not.
 	"""
-	print(":: Extracting video fragments...")
+	print(f":: Extracting video fragments from {source}...")
 	if os.path.exists(tmp['out']):
 		print(f" File {tmp['out']} already exists.")
 		return False, None
 
-	quality, fragments_url = get.get_fragments_url(
-		source, get.get_video_source(source)
-	)
+	video_source = get.get_video_source(source)
+	quality, fragments_url = get.get_fragments_url(source, video_source)
 	dirname = os.path.join(tmp['dir'], quality)
 
 	if not os.path.exists(dirname):
@@ -153,16 +152,16 @@ def remove_fragments(fragments, dirname):
 			os.remove(fragment)
 		os.rmdir(dirname)
 
-def merge_fragments(start, quality, ext="aaa"):
+def merge_fragments(quality, start=0, ext="aaa"):
 	"""
 	Merge video fragments in a single video file.
 
 	Parameters
 	----------
-	start : int
-		Initial fragment index.
 	quality : str
 		Fragment files resolution.
+	start : int, optional
+		Initial fragment index.
 	ext : str, optional
 		Fragment files extension.
 	"""

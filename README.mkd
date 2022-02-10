@@ -4,9 +4,9 @@ Download Japanese animations with Korean subtitles from <https://ohli24.net/>.
 
 ## Requirements
 
-- Python with version `>= 3.10`
-- Install the packages below with pip.  
-`pip install requests selenium undetected_chromedriver`
+- Python with version >= 3.10.
+- Install the following packages with pip.  
+	`pip install requests selenium undetected_chromedriver`
 - Install [ChromeDriver](https://chromedriver.chromium.org/downloads).
 
 ## Usage
@@ -14,19 +14,21 @@ Download Japanese animations with Korean subtitles from <https://ohli24.net/>.
 Always execute `freeze_support` function before doing anything.
 
 ```python
-from anime_downloader import download
 from multiprocessing import freeze_support
+
+from anime_downloader import ...
 
 if __name__ == "__main__":
 	freeze_support()
 	...
 ```
 
-The following is an example.
+Here is an example.
 
 ```python
-from anime_downloader import download
 from multiprocessing import freeze_support
+
+from anime_downloader import download_chapter
 
 if __name__ == "__main__":
 	freeze_support()
@@ -35,14 +37,14 @@ if __name__ == "__main__":
 	chapters[-1] += "(完)"
 
 	for chapter in chapters:
-		download(chapter, auto=True)
+		download_chapter(chapter, auto=True)
 ```
 
 ## To-do
 
 - [x] Find a way to extract some meaningful data of video fragments before
 	downloading them.
-- [ ] Work with the `selenium` package to extract data of anime chapters before
-	downloading them.
+- [x] Work with `selenium` to extract data of anime chapters before downloading
+	them.
 - [ ] Extract anime data with headless browser.
-- [ ] Implement a search function for animes.
+- [x] Implement a search function for animes.
