@@ -1,5 +1,5 @@
 """
-Write video and subtitle.
+Write video and subtitle file.
 
 """
 import os
@@ -41,24 +41,24 @@ def __init__(param, prop, title=None):
 	Returns
 	-------
 	source : str
-		Video data source.
+		Player source.
 	"""
 	match prop:
 		case "name":
 			source, title = get.get_anime_data(f"https://ohli24.net/e/{param}")[0]
-		case "id":
-			source = f"https://pigplayer.com/player/index.php?data={param}"
 		case "source":
 			source = param
+		case "id":
+			source = get.get_source_from_id(param)
 
 	if not title:
 		print(":: Title not found.")
 		return False
 
 	title = sanitize_filename(title)
-	video_id = get.get_id_from_source(source)
+	player_id = get.get_id_from_source(source)
 
-	tmp['dir'] = os.path.join(CONFIG['home'], f"{title}-{video_id}")
+	tmp['dir'] = os.path.join(CONFIG['home'], f"{title}-{player_id}")
 	tmp['out'] = os.path.join(tmp['dir'], f"{title}{CONFIG['ext']}")
 
 	if not os.path.exists(tmp['out']):
@@ -74,7 +74,7 @@ def write_subtitle(source, title):
 	Parameters
 	----------
 	source : str
-		Video data link.
+		Player source.
 	title : str
 		Video title.
 	"""
@@ -95,14 +95,14 @@ def write_fragments(source, start=0):
 	Parameters
 	----------
 	source : str
-		Video data link.
+		Player source.
 	start : int, optional
 		Initial fragment index.
 
 	Returns
 	-------
 	tuple of bool and None
-		Indicates whether the process was succesful or not.
+		Indicates whether the process was successful or not.
 	"""
 	print(f":: Extracting video fragments from {source}...")
 	if os.path.exists(tmp['out']):

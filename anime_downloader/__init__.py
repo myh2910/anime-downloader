@@ -1,8 +1,7 @@
 """
 anime-downloader
 ================
-Download animes with subtitles from https://ohli24.net/ and
-https://pigplayer.com.
+Download animes with subtitles from https://ohli24.net/.
 
 """
 from timeit import default_timer
@@ -11,7 +10,7 @@ from . import write
 from .config import CONFIG
 from .get import get_anime_data, get_chapters_data
 
-__version__ = "2.1.0"
+__version__ = "2.2.0"
 __author__ = "Yohan Min"
 
 def download_chapter(param, prop="name", title=None, start=0, **kwargs):
@@ -23,7 +22,7 @@ def download_chapter(param, prop="name", title=None, start=0, **kwargs):
 	param : str
 		Parameter value.
 	prop : str, optional
-		Parameter type, between "name", "id" and "source".
+		Parameter type, between "name", "source" and "id".
 	title : str or None, optional
 		Video title.
 	start : int, optional

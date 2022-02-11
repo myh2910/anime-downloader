@@ -21,7 +21,7 @@ def get_subtitle_url(source):
 	Parameters
 	----------
 	source : str
-		Video data source.
+		Player source.
 
 	Returns
 	-------
@@ -62,7 +62,7 @@ def get_video_source(source):
 	Parameters
 	----------
 	source : str
-		Video data source.
+		Player source.
 
 	Returns
 	-------
@@ -84,7 +84,7 @@ def get_fragments_url(source, video_source):
 	Parameters
 	----------
 	source : str
-		Video data source.
+		Player source.
 	video_source : str
 		Video source.
 
@@ -103,6 +103,8 @@ def get_fragments_url(source, video_source):
 	resolutions, heights = {}, []
 
 	for _, height, url in re.findall("RESOLUTION=(.*?)x(.*?)\n(.*?)\n", content):
+		if (idx := height.find(",")) >= 0:
+			height = height[:idx]
 		resolutions[f'{height}p'] = url
 		heights.append(int(height))
 
@@ -117,7 +119,8 @@ def get_fragments_url(source, video_source):
 	res = requests.get(resolutions[quality], headers=headers)
 	res.raise_for_status()
 
-	return quality, re.findall("&url=(.*?)\n", res.content.decode("utf8"))
+	content = res.content.decode("utf8")
+	return quality, re.findall("&url=(.*?)\n", content)
 
 def get_fragment_file(url, path):
 	"""
@@ -144,23 +147,50 @@ def get_fragment_file(url, path):
 
 def get_id_from_source(source):
 	"""
-	Get video ID from source.
+	Get player ID from source.
 
 	Parameters
 	----------
 	source : str
-		Video data source.
+		Player source.
 
 	Returns
 	-------
-	str
-		Video data ID.
+	str or None
+		Player ID.
 	"""
-	return re.search("data=(.*?)$", source).group(1)
+	if search := re.search("data=(.*?)$", source):
+		return f"{search.group(1)} [pigplayer]"
+	if search := re.search("video/(.*?)$", source):
+		return f"{search.group(1)} [ndoodle]"
+	return None
+
+def get_source_from_id(player_id):
+	"""
+	Get player source from ID.
+
+	Parameters
+	----------
+	player_id : str
+		Player ID.
+
+	Returns
+	-------
+	str or None
+		Player source.
+	"""
+	if search := re.search(r"(.*?) \[pigplayer\]", player_id):
+		return f"https://pigplayer.com/player/index.php?data={search.group(1)}"
+	if search := re.search(r"(.*?) \[ndoodle\]", player_id):
+		return f"https://ndoodle.xyz/video/{search.group(1)}"
+	return None
 
 def get_chrome_driver():
 	"""
 	Get ChromeDriver.
+
+	An error occurs with headless WebDriver:
+	>>> options.add_argument("--headless")
 
 	Returns
 	-------
@@ -169,7 +199,6 @@ def get_chrome_driver():
 	"""
 	options = uc.ChromeOptions()
 	options.add_argument("--start-maximized")
-	# options.add_argument("--headless")
 
 	driver = uc.Chrome(options=options)
 
@@ -182,14 +211,13 @@ def get_anime_data(*args, driver=None):
 	"""
 	Get anime data from https://ohli24.net/.
 
-	We use `undetected-chromedriver` package to bypass cloudflare protections.
-	For technical reasons, headless ChromeDriver doesn't work well.
+	We use `undetected-chromedriver` package to bypass Cloudflare protections.
 
 	Parameters
 	----------
 	args : tuple of str
 		Anime chapter links.
-	driver : undetected_chromedriver.Chrome or None, optional
+	driver : Chrome or None, optional
 		ChromeDriver object.
 
 	Returns
@@ -201,7 +229,7 @@ def get_anime_data(*args, driver=None):
 		driver = get_chrome_driver()
 
 	data = []
-	print(":: Extracting pigplayer source...")
+	print(":: Extracting player source...")
 	for url in args:
 		driver.get(url)
 
