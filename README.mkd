@@ -42,9 +42,7 @@ if __name__ == "__main__":
 
 ## To-do
 
-- [x] Find a way to extract some meaningful data of video fragments before
-	downloading them.
-- [x] Work with `selenium` to extract data of anime chapters before downloading
-	them.
-- [ ] Extract anime data with headless browser.
+- [x] Extract some data of video fragments before downloading them.
+- [x] Use `selenium` to extract data of anime chapters before downloading them.
+- [ ] Extract anime data with headless WebDriver.
 - [x] Implement a search function for animes.
