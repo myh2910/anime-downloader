@@ -16,5 +16,5 @@ Gecko/20100101 Firefox/97.0",
 	'wait': 20,
 	'show_rows': 50,
 	'minimize': False,
-	'auto': False
+	'auto': True
 }

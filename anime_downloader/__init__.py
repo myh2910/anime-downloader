@@ -1,6 +1,7 @@
 """
 anime-downloader
 ================
+
 Download animes with subtitles from https://ohli24.net/.
 
 """
@@ -10,8 +11,8 @@ from . import write
 from .config import CONFIG
 from .get import get_anime_data, get_chapters_data
 
-__version__ = "2.2.0"
 __author__ = "Yohan Min"
+__version__ = "2.2.1"
 
 def download_chapter(param, prop="name", title=None, start=0, **kwargs):
 	"""
@@ -56,7 +57,7 @@ def download_chapters(*args, **kwargs):
 
 	elapsed_time = -default_timer()
 
-	data = get_anime_data(f"https://ohli24.net/e/{name}" for name in args)
+	data = get_anime_data(*(f"https://ohli24.net/e/{name}" for name in args))
 	for source, title in data:
 		new_title = write.__init__(source, "source", title)[1]
 		status, quality = write.write_fragments(source)
