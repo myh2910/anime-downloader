@@ -12,7 +12,7 @@ from .config import CONFIG
 from .get import get_anime_data, get_chapters_data
 
 __author__ = "Yohan Min"
-__version__ = "2.2.1"
+__version__ = "2.2.2"
 
 def download_chapter(param, prop="name", title=None, start=0, **kwargs):
 	"""

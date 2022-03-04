@@ -2,6 +2,7 @@
 Extract video and subtitle data.
 
 """
+import platform
 import re
 
 import requests
@@ -199,6 +200,9 @@ def get_chrome_driver():
 	"""
 	options = uc.ChromeOptions()
 	options.add_argument("--start-maximized")
+
+	if platform.system() == "Linux":
+		options.binary_location = "/bin/google-chrome-stable"
 
 	driver = uc.Chrome(options=options)
 
