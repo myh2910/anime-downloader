@@ -111,8 +111,9 @@ def write_fragments(source, start=0):
 
 	video_source = get.get_video_source(source)
 	quality, fragments_url = get.get_fragments_url(source, video_source)
-	dirname = os.path.join(tmp['dir'], quality)
+	print(f" {len(fragments_url)} fragments found.")
 
+	dirname = os.path.join(tmp['dir'], quality)
 	if not os.path.exists(dirname):
 		os.makedirs(dirname)
 
