@@ -237,7 +237,7 @@ def get_anime_data(*args, driver=None):
 	for url in args:
 		driver.get(url)
 
-		xpath = "//div[@id='movie_player']//iframe"
+		xpath = "//div[@class='view-padding']//iframe"
 		source = WebDriverWait(driver, CONFIG['wait']).until(
 			EC.presence_of_element_located((By.XPATH, xpath))
 		).get_attribute("src")
