@@ -78,15 +78,16 @@ def write_subtitle(source, title):
 	title : str
 		Video title.
 	"""
-	url = get.get_subtitle_url(source)
-	ext = os.path.splitext(url)[1]
-	path = os.path.join(tmp['dir'], f"{title}{ext}")
-
 	print(":: Extracting subtitle file...")
-	if os.path.exists(path):
-		print(f" File {path} already exists.")
+
+	if url := get.get_subtitle_url(source):
+		path = os.path.join(tmp['dir'], f"{title}{os.path.splitext(url)[1]}")
+		if os.path.exists(path):
+			print(f" File {path} already exists.")
+		else:
+			get.get_subtitle_file(url, path)
 	else:
-		get.get_subtitle_file(url, path)
+		print(" Subtitle file does not exist.")
 
 def write_fragments(source, start=0):
 	"""
