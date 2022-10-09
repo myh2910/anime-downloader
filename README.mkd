@@ -1,7 +1,6 @@
 # anime-downloader
 
-Download Japanese animes with Korean subtitles from illegal anime streaming
-site <https://ohli24.net/>.
+Download animes with Korean subtitles.
 
 ## Requirements
 
