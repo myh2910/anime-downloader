@@ -12,9 +12,9 @@ from .config import CONFIG
 from .get import get_anime_data, get_chapters_data
 
 __author__ = "Yohan Min"
-__version__ = "2.2.2"
+__version__ = "2.3.0"
 
-def download_chapter(param, prop="name", title=None, start=0, **kwargs):
+def download_chapter(param, prop="name", title=None, **kwargs):
 	"""
 	Download anime chapter and show the elapsed time.
 
@@ -26,8 +26,6 @@ def download_chapter(param, prop="name", title=None, start=0, **kwargs):
 		Parameter type, between "name", "source" and "id".
 	title : str or None, optional
 		Video title.
-	start : int, optional
-		Initial fragment index.
 	"""
 	for key, value in kwargs.items():
 		CONFIG[key] = value
@@ -35,9 +33,8 @@ def download_chapter(param, prop="name", title=None, start=0, **kwargs):
 	elapsed_time = -default_timer()
 
 	source, title = write.__init__(param, prop, title)
-	status, quality = write.write_fragments(source, start)
-	if status:
-		write.merge_fragments(quality, start)
+	if write.write_fragments(source):
+		write.merge_fragments()
 	write.write_subtitle(source, title)
 
 	elapsed_time += default_timer()
@@ -60,9 +57,8 @@ def download_chapters(*args, **kwargs):
 	data = get_anime_data(*(f"https://ohli24.net/e/{name}" for name in args))
 	for source, title in data:
 		new_title = write.__init__(source, "source", title)[1]
-		status, quality = write.write_fragments(source)
-		if status:
-			write.merge_fragments(quality)
+		if write.write_fragments(source):
+			write.merge_fragments()
 		write.write_subtitle(source, new_title)
 
 	elapsed_time += default_timer()
@@ -87,9 +83,8 @@ def download_anime(param, prop="name", **kwargs):
 	if data := get_chapters_data(param, prop):
 		for source, title in data:
 			new_title = write.__init__(source, "source", title)[1]
-			status, quality = write.write_fragments(source)
-			if status:
-				write.merge_fragments(quality)
+			if write.write_fragments(source):
+				write.merge_fragments()
 			write.write_subtitle(source, new_title)
 
 	elapsed_time += default_timer()

@@ -4,11 +4,10 @@ Download animes with Korean subtitles.
 
 ## Requirements
 
-- Install [Python](https://www.python.org/) with version >= 3.10.
+- Install [Python](https://www.python.org/) with version ≥ 3.10.
 - Install [Requests](https://pypi.org/project/requests/),
 	[Selenium](https://pypi.org/project/selenium/) and
-	[undetected_chromedriver](https://pypi.org/project/undetected-chromedriver/)
-	with pip:  
+	[undetected_chromedriver](https://pypi.org/project/undetected-chromedriver/):  
 	`pip install requests selenium undetected_chromedriver`
 - Install [ChromeDriver](https://chromedriver.chromium.org/).
 
@@ -36,12 +35,12 @@ from anime_downloader import download_chapter
 if __name__ == "__main__":
 	freeze_support()
 
-	download_chapter("스파이 패밀리 1화", quality="fast")
+	download_chapter("체인소 맨 1화", quality="fast")
 ```
 
 ## To-do
 
 - [x] Extract some data of video fragments before downloading them.
 - [x] Use `selenium` to extract data of anime chapters before downloading them.
-- [ ] Extract anime data with headless WebDriver.
+- [x] Extract anime data with headless WebDriver.
 - [x] Implement a search function for animes.
