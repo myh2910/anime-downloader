@@ -35,26 +35,32 @@ def get_subtitle_url(source):
 	res = requests.get(source, headers=headers)
 	res.raise_for_status()
 
-	decoded_content = res.content.decode("utf8")
-	return re.search("var videoCaption = '(.*?)';", decoded_content).group(1)
+	content = res.content.decode("utf8")
 
-def get_subtitle_file(url, path):
-	"""
-	Download subtitle file.
+	js_decoder = "function(p,a,c,k,e,d){e=function(c){return(c<a?'':e(parseInt(c/\
+a)))+((c=c%a)>35?String.fromCharCode(c+29):c.toString(36))};if(!''.replace(/^/,\
+String)){while(c--){d[e(c)]=k[c]||e(c)}k=[function(e){return d[e]}];e=function(\
+){return'\\\\w+'};c=1};while(c--){if(k[c]){p=p.replace(new RegExp('\\\\b'+e(c)+\
+'\\\\b','g'),k[c])}}return p}"
+	py_decoder = "def decode(p,a,c,k,e,d):\n\tdef base36(n):\n\t\tr=[]\n\t\twhile\
+ n:r.append('0123456789abcdefghijklmnopqrstuvwxyz'[n%36]);n//=36\n\t\treturn''.\
+join(reversed(r or'0'))\n\te=lambda n:(''if n<a else e(int(n/a)))+(chr(n+29)if(\
+n:=n%a)>35 else base36(n))\n\td={e(n):k[n]or e(n)for n in range(c)}\n\treturn r\
+e.sub('[a-zA-Z0-9_]+',lambda m:d[m.group()],p).replace('\\\\/','/')"
 
-	Parameters
-	----------
-	url : str
-		Subtitle file link.
-	path : str
-		Subtitle file path.
-	"""
-	print(f" Connecting to {url}...")
-	res = requests.get(url)
-	res.raise_for_status()
-
-	with open(path, "wb") as file:
-		file.write(res.content)
+	try:
+		if (start := content.find(js_decoder)) != -1:
+			end = content.find(")</script>", start)
+			exec(py_decoder)
+			content = eval("decode" + content[start + len(js_decoder):end])
+			return re.search('"kind":"captions","file":"(.*?)"', content).group(1)
+		else:
+			raise
+	except:
+		try:
+			return re.search("var videoCaption = '(.*?)';", content).group(1)
+		except AttributeError:
+			return False
 
 def get_video_source(source):
 	"""
@@ -190,9 +196,6 @@ def get_chrome_driver():
 	"""
 	Get ChromeDriver.
 
-	An error occurs with headless WebDriver:
-	>>> options.add_argument("--headless")
-
 	Returns
 	-------
 	Chrome
@@ -200,14 +203,12 @@ def get_chrome_driver():
 	"""
 	options = uc.ChromeOptions()
 	options.add_argument("--start-maximized")
+	options.add_argument("--headless")
 
 	if platform.system() == "Linux":
 		options.binary_location = "/bin/google-chrome-stable"
 
 	driver = uc.Chrome(options=options)
-
-	if CONFIG['minimize']:
-		driver.minimize_window()
 
 	return driver
 
@@ -233,7 +234,7 @@ def get_anime_data(*args, driver=None):
 		driver = get_chrome_driver()
 
 	data = []
-	print(":: Extracting player source...")
+	print(":: Extracting player sources...")
 	for url in args:
 		driver.get(url)
 
@@ -277,8 +278,8 @@ def get_chapters_data(param, prop):
 		case "search":
 			print(":: Extracting list of animes...")
 			driver.get(
-				f"https://ohli24.net/bbs/search.php?srows={CONFIG['show_rows']}\
-&sfl=wr_subject&stx={param}"
+				"https://ohli24.net/bbs/search.php?srows=%d&sfl=wr_subject&stx=%s"
+				% (CONFIG['show_rows'], param)
 			)
 			content = WebDriverWait(driver, CONFIG['wait']).until(
 				EC.presence_of_element_located((By.CLASS_NAME, "at-content"))
