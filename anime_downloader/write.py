@@ -3,6 +3,9 @@ Write video and subtitle file.
 
 """
 import os
+from concurrent.futures import ThreadPoolExecutor
+
+import requests
 
 from . import get
 from .config import CONFIG
@@ -59,13 +62,28 @@ def __init__(param, prop, title=None):
 	player_id = get.get_id_from_source(source)
 
 	tmp['dir'] = os.path.join(CONFIG['home'], f"{title}-{player_id}")
-	tmp['out'] = os.path.join(tmp['dir'], f"{title}{CONFIG['ext']}")
+	tmp['out'] = os.path.join(tmp['dir'], f"{title}.{CONFIG['ext']}")
 
 	if not os.path.exists(tmp['out']):
 		if not os.path.exists(tmp['dir']):
 			os.makedirs(tmp['dir'])
 
 	return source, title
+
+def wget(url, path, session=requests, err_format="%s", max_repeat=3):
+	_err = ""
+	while max_repeat > 0:
+		try:
+			res = session.get(url)
+			res.raise_for_status()
+			with open(path, "wb") as file:
+				file.write(res.content)
+			return True
+		except Exception as err:
+			_err = err
+		max_repeat -= 1
+	print(err_format % _err)
+	return False
 
 def write_subtitle(source, title):
 	"""
@@ -85,11 +103,17 @@ def write_subtitle(source, title):
 		if os.path.exists(path):
 			print(f" File {path} already exists.")
 		else:
-			get.get_subtitle_file(url, path)
+			print(f" Connecting to {url}...")
+			wget(url, path)
 	else:
 		print(" Subtitle file does not exist.")
 
-def write_fragments(source, start=0):
+def get_fragment(task):
+	fragment, path, session, idx = task
+	print(f" [{idx}] Connecting to {fragment}...")
+	return wget(fragment, path, session, f" [{idx}] %s")
+
+def write_fragments(source, max_workers=10):
 	"""
 	Download video fragments.
 
@@ -97,40 +121,47 @@ def write_fragments(source, start=0):
 	----------
 	source : str
 		Player source.
-	start : int, optional
-		Initial fragment index.
+	max_workers : int, optional
+		Maximum number of threads.
 
 	Returns
 	-------
-	tuple of bool and None
+	bool
 		Indicates whether the process was successful or not.
 	"""
 	print(f":: Extracting video fragments from {source}...")
 	if os.path.exists(tmp['out']):
 		print(f" File {tmp['out']} already exists.")
-		return False, None
+		return False
 
 	video_source = get.get_video_source(source)
 	quality, fragments_url = get.get_fragments_url(source, video_source)
 	print(f" {len(fragments_url)} fragments found.")
 
-	dirname = os.path.join(tmp['dir'], quality)
-	if not os.path.exists(dirname):
-		os.makedirs(dirname)
+	tmp['ver'] = os.path.join(tmp['dir'], quality)
+	if not os.path.exists(tmp['ver']):
+		os.makedirs(tmp['ver'])
 
-	for idx in range(start, len(fragments_url)):
-		url = fragments_url[idx]
-		ext = os.path.splitext(url)[1]
-		path = os.path.join(dirname, f"{idx}{ext}")
+	tmp['num'] = len(fragments_url)
+	tmp['fra'] = os.path.join(tmp['ver'], "%d.ts")
 
-		if os.path.exists(path):
-			print(f" File {path} already exists.")
-		else:
-			get.get_fragment_file(url, path)
+	with requests.Session() as session:
+		tasks = []
+		for i in range(tmp['num']):
+			url = fragments_url[i]
+			path = tmp['fra'] % i
 
-	return True, quality
+			if os.path.exists(path):
+				print(f" File {path} already exists.")
+			else:
+				tasks.append((url, path, session, f"{i + 1}/{tmp['num']}"))
 
-def remove_fragments(fragments, dirname):
+		with ThreadPoolExecutor(max_workers) as pool:
+			pool.map(get_fragment, tasks)
+
+	return True
+
+def remove_fragments(fragments):
 	"""
 	Remove fragment files.
 
@@ -138,8 +169,6 @@ def remove_fragments(fragments, dirname):
 	----------
 	fragments : list of str
 		Fragment file paths.
-	dirname : str
-		Folder name where the fragment files are saved.
 	"""
 	if CONFIG['auto']:
 		remove = "y"
@@ -152,20 +181,12 @@ def remove_fragments(fragments, dirname):
 		print(":: Removing fragment files...")
 		for fragment in fragments:
 			os.remove(fragment)
-		os.rmdir(dirname)
+		os.rmdir(tmp['ver'])
 
-def merge_fragments(quality, start=0, ext="aaa"):
+def merge_fragments():
 	"""
 	Merge video fragments in a single video file.
 
-	Parameters
-	----------
-	quality : str
-		Fragment files resolution.
-	start : int, optional
-		Initial fragment index.
-	ext : str, optional
-		Fragment files extension.
 	"""
 	if os.path.exists(tmp['out']):
 		if CONFIG['auto']:
@@ -180,20 +201,16 @@ def merge_fragments(quality, start=0, ext="aaa"):
 		print(":: Merging video fragments in a single file...")
 
 	if merge in "yY":
-		with open(tmp['out'], "wb") as file:
-			dirname = os.path.join(tmp['dir'], quality)
-			idx = start
+		with open(tmp['out'], "wb") as anime:
 			fragments = []
-
-			while True:
-				fragment = os.path.join(dirname, f"{idx}.{ext}")
-				if not os.path.exists(fragment):
+			for i in range(tmp['num']):
+				if not os.path.exists(tmp['fra'] % i):
+					print(f" File {tmp['fra'] % i} doesn't exist")
 					break
 
-				print(f" Merging file {fragment}...")
-				fragments.append(fragment)
-				with open(fragment, "rb") as fragment_file:
-					file.write(fragment_file.read())
-				idx += 1
+				print(f" [{i + 1}/{tmp['num']}] Merging fragment {tmp['fra'] % i}...")
+				fragments.append(tmp['fra'] % i)
+				with open(tmp['fra'] % i, "rb") as file:
+					anime.write(file.read())
 
-	remove_fragments(fragments, dirname)
+	remove_fragments(fragments)
