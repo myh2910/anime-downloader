@@ -264,7 +264,7 @@ def get_chapters_data(param, prop):
 	Returns
 	-------
 	list of tuple or None
-		Anime chapters data available.
+		Available data of anime chapters.
 	"""
 	driver = get_chrome_driver()
 
@@ -279,7 +279,7 @@ def get_chapters_data(param, prop):
 			print(":: Extracting list of animes...")
 			driver.get(
 				"https://ohli24.net/bbs/search.php?srows=%d&sfl=wr_subject&stx=%s"
-				% (CONFIG['show_rows'], param)
+				% (CONFIG['match'], param)
 			)
 			content = WebDriverWait(driver, CONFIG['wait']).until(
 				EC.presence_of_element_located((By.CLASS_NAME, "at-content"))

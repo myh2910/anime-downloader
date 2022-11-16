@@ -13,6 +13,7 @@ CONFIG = {
 	'ext': "mp4",
 	'home': "Anime",
 	'wait': 20,
-	'show_rows': 50,
+	'match': 50,
+	'repeat': 3,
 	'auto': True
 }

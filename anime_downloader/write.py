@@ -12,22 +12,6 @@ from .config import CONFIG
 
 tmp = {}
 
-def sanitize_filename(filename):
-	"""
-	Sanitize filename.
-
-	Parameters
-	----------
-	filename : str
-		Possibly invalid filename.
-
-	Returns
-	-------
-	str
-		Converted filename.
-	"""
-	return "".join("_" if char in "\\/:*?\"<>|" else char for char in filename)
-
 def __init__(param, prop, title=None):
 	"""
 	Initialize module.
@@ -58,7 +42,7 @@ def __init__(param, prop, title=None):
 		print(":: Title not found.")
 		return False
 
-	title = sanitize_filename(title)
+	title = "".join("_" if char in "\\/:*?\"<>|" else char for char in title)
 	player_id = get.get_id_from_source(source)
 
 	tmp['dir'] = os.path.join(CONFIG['home'], f"{title}-{player_id}")
@@ -70,8 +54,10 @@ def __init__(param, prop, title=None):
 
 	return source, title
 
-def wget(url, path, session=requests, err_format="%s", max_repeat=3):
+def wget(url, path, session=requests, err_format="%s"):
 	_err = ""
+	max_repeat = CONFIG['repeat']
+
 	while max_repeat > 0:
 		try:
 			res = session.get(url)
@@ -82,7 +68,10 @@ def wget(url, path, session=requests, err_format="%s", max_repeat=3):
 		except Exception as err:
 			_err = err
 		max_repeat -= 1
+
 	print(err_format % _err)
+	tmp['err'] = False
+
 	return False
 
 def write_subtitle(source, title):
@@ -144,6 +133,7 @@ def write_fragments(source, max_workers=10):
 
 	tmp['num'] = len(fragments_url)
 	tmp['fra'] = os.path.join(tmp['ver'], "%d.ts")
+	tmp['err'] = True
 
 	with requests.Session() as session:
 		tasks = []
@@ -159,7 +149,7 @@ def write_fragments(source, max_workers=10):
 		with ThreadPoolExecutor(max_workers) as pool:
 			pool.map(get_fragment, tasks)
 
-	return True
+	return tmp['err']
 
 def remove_fragments(fragments):
 	"""

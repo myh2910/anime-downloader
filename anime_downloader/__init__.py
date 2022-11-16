@@ -2,7 +2,10 @@
 anime-downloader
 ================
 
-Download animes with subtitles from https://ohli24.net/.
+Download animes with Korean subtitles from OHLI24.
+
+WARNING: OHLI24 is an illegal anime streaming site from Korea. I am not
+responsible for any legal issues or damages regarding to this.
 
 """
 from timeit import default_timer
@@ -12,11 +15,26 @@ from .config import CONFIG
 from .get import get_anime_data, get_chapters_data
 
 __author__ = "Yohan Min"
-__version__ = "2.3.0"
+__version__ = "2.3.1"
+
+class Timer:
+	def __init__(self):
+		self.elapsed_time = -default_timer()
+
+	def end(self):
+		self.elapsed_time += default_timer()
+		print(f":: Elapsed time: {self.elapsed_time:0.2f} seconds")
+
+def download_video(source, title):
+	if write.write_fragments(source):
+		write.merge_fragments()
+	else:
+		print(" Cannot merge fragments.")
+	write.write_subtitle(source, title)
 
 def download_chapter(param, prop="name", title=None, **kwargs):
 	"""
-	Download anime chapter and show the elapsed time.
+	Download an anime chapter.
 
 	Parameters
 	----------
@@ -30,19 +48,15 @@ def download_chapter(param, prop="name", title=None, **kwargs):
 	for key, value in kwargs.items():
 		CONFIG[key] = value
 
-	elapsed_time = -default_timer()
+	timer = Timer()
 
-	source, title = write.__init__(param, prop, title)
-	if write.write_fragments(source):
-		write.merge_fragments()
-	write.write_subtitle(source, title)
+	download_video(*write.__init__(param, prop, title))
 
-	elapsed_time += default_timer()
-	print(f":: Elapsed time: {elapsed_time:0.2f}")
+	timer.end()
 
 def download_chapters(*args, **kwargs):
 	"""
-	Download anime chapters.
+	Download multiple anime chapters.
 
 	Parameters
 	----------
@@ -52,21 +66,17 @@ def download_chapters(*args, **kwargs):
 	for key, value in kwargs.items():
 		CONFIG[key] = value
 
-	elapsed_time = -default_timer()
+	timer = Timer()
 
 	data = get_anime_data(*(f"https://ohli24.net/e/{name}" for name in args))
 	for source, title in data:
-		new_title = write.__init__(source, "source", title)[1]
-		if write.write_fragments(source):
-			write.merge_fragments()
-		write.write_subtitle(source, new_title)
+		download_video(source, write.__init__(source, "source", title)[1])
 
-	elapsed_time += default_timer()
-	print(f":: Elapsed time: {elapsed_time:0.2f}")
+	timer.end()
 
 def download_anime(param, prop="name", **kwargs):
 	"""
-	Download anime.
+	Download all available chapters from an anime.
 
 	Parameters
 	----------
@@ -78,14 +88,11 @@ def download_anime(param, prop="name", **kwargs):
 	for key, value in kwargs.items():
 		CONFIG[key] = value
 
-	elapsed_time = -default_timer()
+	timer = Timer()
 
 	if data := get_chapters_data(param, prop):
 		for source, title in data:
-			new_title = write.__init__(source, "source", title)[1]
-			if write.write_fragments(source):
-				write.merge_fragments()
-			write.write_subtitle(source, new_title)
+			download_video(source,
+				write.__init__(source, "source", title)[1])
 
-	elapsed_time += default_timer()
-	print(f":: Elapsed time: {elapsed_time:0.2f}")
+	timer.end()
