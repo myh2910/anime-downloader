@@ -15,5 +15,6 @@ CONFIG = {
 	'wait': 20,
 	'match': 50,
 	'repeat': 3,
+	'threads': 10,
 	'auto': True
 }
