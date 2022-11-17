@@ -68,9 +68,10 @@ def download_chapters(*args, **kwargs):
 
 	timer = Timer()
 
-	data = get_anime_data(*(f"https://ohli24.net/e/{name}" for name in args))
-	for source, title in data:
-		download_video(source, write.__init__(source, "source", title)[1])
+	if args:
+		data = get_anime_data(*(f"https://ohli24.net/e/{name}" for name in args))
+		for source, title in data:
+			download_video(source, write.__init__(source, "source", title)[1])
 
 	timer.end()
 
