@@ -192,7 +192,7 @@ def get_source_from_id(player_id):
 		return f"https://ndoodle.xyz/video/{search.group(1)}"
 	return None
 
-def get_chrome_driver():
+def get_webdriver():
 	"""
 	Get ChromeDriver.
 
@@ -208,9 +208,7 @@ def get_chrome_driver():
 	if platform.system() == "Linux":
 		options.binary_location = "/bin/google-chrome-stable"
 
-	driver = uc.Chrome(options=options)
-
-	return driver
+	return uc.Chrome(options, use_subprocess=True)
 
 def get_anime_data(*args, driver=None):
 	"""
@@ -230,11 +228,15 @@ def get_anime_data(*args, driver=None):
 	list of tuple
 		Data of animes.
 	"""
+	if not args:
+		return []
+
 	if not driver:
-		driver = get_chrome_driver()
+		driver = get_webdriver()
 
 	data = []
 	print(":: Extracting player sources...")
+
 	for url in args:
 		driver.get(url)
 
@@ -247,7 +249,8 @@ def get_anime_data(*args, driver=None):
 		title = driver.find_element(By.XPATH, "//div[@class='view-title']//h1")
 		data.append((source, title.text))
 
-	driver.quit()
+	driver.close()
+
 	return data
 
 def get_chapters_data(param, prop):
@@ -266,7 +269,7 @@ def get_chapters_data(param, prop):
 	list of tuple or None
 		Available data of anime chapters.
 	"""
-	driver = get_chrome_driver()
+	driver = get_webdriver()
 
 	match prop:
 		case "name":
@@ -288,7 +291,7 @@ def get_chapters_data(param, prop):
 			try:
 				search_none = content.find_element(By.CLASS_NAME, "search-none")
 				print(f" [Error] {search_none.text}")
-				driver.quit()
+				driver.close()
 				return None
 			except NoSuchElementException:
 				xpath = "//div[@class='list-desc']//a"
