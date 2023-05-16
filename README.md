@@ -4,7 +4,6 @@ Download animes with Korean subtitles.
 
 ## Requirements
 
-- Install [Python](https://www.python.org/) with version ≥ 3.10.
 - `pip install -r requirements.txt`
 - Install [ChromeDriver](https://chromedriver.chromium.org/).
 
