@@ -33,12 +33,11 @@ def write_video(param, prop, title=None):
 
     title = "".join("_" if char in '\\/:*?"<>|' else char for char in title)
 
-    tmp["path"] = os.path.join(CONFIG["home"], title)
-    tmp["output"] = os.path.join(tmp["path"], f"{title}.{CONFIG['ext']}")
+    tmp["fragments_path"] = os.path.join(CONFIG["home"], title)
+    tmp["output"] = os.path.join(CONFIG["home"], f"{title}.{CONFIG['ext']}")
 
-    if not os.path.exists(tmp["output"]):
-        if not os.path.exists(tmp["path"]):
-            os.makedirs(tmp["path"])
+    if not os.path.exists(tmp["fragments_path"]):
+        os.makedirs(tmp["fragments_path"])
 
     if write_fragments(source):
         merge_fragments()
@@ -88,7 +87,7 @@ def write_subtitle(source, title):
     print(":: Extracting subtitle file...")
 
     if url := get.get_subtitle_url(source):
-        path = os.path.join(tmp["path"], f"{title}{os.path.splitext(url)[1]}")
+        path = os.path.join(CONFIG["home"], f"{title}{os.path.splitext(url)[1]}")
         if os.path.exists(path):
             print(f" File {path} already exists.")
         else:
@@ -119,12 +118,8 @@ def write_fragments(source):
         return False
 
     video_source = get.get_video_source(source)
-    quality, fragments_url = get.get_fragments_url(source, video_source)
+    fragments_url = get.get_fragments_url(source, video_source)[1]
     print(f" {len(fragments_url)} fragments found.")
-
-    tmp["fragments_path"] = os.path.join(tmp["path"], quality)
-    if not os.path.exists(tmp["fragments_path"]):
-        os.makedirs(tmp["fragments_path"])
 
     tmp["num_fragments"] = len(fragments_url)
     tmp["fragment_file"] = os.path.join(tmp["fragments_path"], "%d.ts")
