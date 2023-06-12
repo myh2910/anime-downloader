@@ -219,15 +219,15 @@ def get_chapters_data(param, prop):
             except NoSuchElementException:
                 xpath = "//div[@class='list-desc']//a"
                 list_desc = content.find_elements(By.XPATH, xpath)
-                width = len(str(len(list_desc) - 1))
+                width = len(str(len(list_desc)))
 
                 for idx, board in enumerate(list_desc):
                     title = board.find_element(By.CLASS_NAME, "post-title").text
-                    print(" [" + str(idx).rjust(width) + "]", title)
+                    print(" [%s] %s" % (str(idx + 1).rjust(width), title))
 
-                idx = input(":: Select anime index [default: 0] ").strip()
+                idx = input(":: Select anime index [default: 1] ").strip()
                 if idx:
-                    idx = int(idx)
+                    idx = int(idx) - 1
                 else:
                     idx = 0
 
@@ -237,9 +237,30 @@ def get_chapters_data(param, prop):
     list_body = WebDriverWait(driver, CONFIG["wait"]).until(
         EC.presence_of_element_located((By.CLASS_NAME, "list-body"))
     )
-    item_subject = list_body.find_elements(By.CLASS_NAME, "item-subject")[::-1]
-    for idx, chapter in enumerate(item_subject):
-        print(f" {chapter.text}")
+    list_chapters = list_body.find_elements(By.CLASS_NAME, "item-subject")[::-1]
+    width = len(str(len(list_chapters)))
 
-    chapters = (chapter.get_attribute("href") for chapter in item_subject)
+    for idx, chapter in enumerate(list_chapters):
+        print(" [%s] %s" % (str(idx + 1).rjust(width), chapter.text))
+
+    idx = input(":: Select chapters index [default: all] ").strip()
+    if idx and idx != "all":
+        list_idx = []
+
+        for range_idx in idx.split(","):
+            range_idx = range_idx.strip()
+            if not range_idx:
+                continue
+
+            if "-" in range_idx:
+                limits = [int(num.strip()) for num in range_idx.split("-")]
+                list_idx.extend(range(limits[0] - 1, limits[1]))
+            else:
+                list_idx.append(int(range_idx) - 1)
+
+        list_idx.sort()
+        chapters = (list_chapters[i].get_attribute("href") for i in list_idx)
+    else:
+        chapters = (chapter.get_attribute("href") for chapter in list_chapters)
+
     return get_anime_data(*chapters, driver=driver)
