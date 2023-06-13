@@ -219,11 +219,10 @@ def get_chapters_data(param, prop):
             except NoSuchElementException:
                 xpath = "//div[@class='list-desc']//a"
                 list_desc = content.find_elements(By.XPATH, xpath)
-                width = len(str(len(list_desc)))
 
                 for idx, board in enumerate(list_desc):
                     title = board.find_element(By.CLASS_NAME, "post-title").text
-                    print(" [%s] %s" % (str(idx + 1).rjust(width), title))
+                    print(" [%d] %s" % (idx + 1, title))
 
                 idx = input(":: Select anime index [default: 1] ").strip()
                 if idx:
@@ -238,12 +237,11 @@ def get_chapters_data(param, prop):
         EC.presence_of_element_located((By.CLASS_NAME, "list-body"))
     )
     list_chapters = list_body.find_elements(By.CLASS_NAME, "item-subject")[::-1]
-    width = len(str(len(list_chapters)))
 
     for idx, chapter in enumerate(list_chapters):
-        print(" [%s] %s" % (str(idx + 1).rjust(width), chapter.text))
+        print(" [%d] %s" % (idx + 1, chapter.text))
 
-    idx = input(":: Select chapters index [default: all] ").strip()
+    idx = input(":: Select chapters index (e.g. 1,3,5-10) [default: all] ").strip()
     if idx and idx != "all":
         list_idx = []
 
